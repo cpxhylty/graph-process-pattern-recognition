@@ -17,8 +17,15 @@ public class ImageBasicProcess {
         File source = new File("/Users/xuhaoyu/大三下/图像处理与模式识别/lenna.jpg");
         BufferedImage image = ImageIO.read(source);
 
-        //histogramEqualization
+        //process
         BufferedImage equalizedImage = histogramEqualization(image);
+        BufferedImage stretchedImage = linearStretch(image);
+
+        //output
+        ImageIO.write(equalizedImage, "jpg", new File("/Users/xuhaoyu/大三下/图像处理与模式识别/equalized.jpg"));
+        ImageIO.write(stretchedImage, "jpg", new File("/Users/xuhaoyu/大三下/图像处理与模式识别/stretched.jpg"));
+    }
+
 //        template of getting pixel
 /*        int pixel = image.getRGB(128, 128);
         Color color = new Color(pixel);
@@ -26,12 +33,7 @@ public class ImageBasicProcess {
         System.out.println(color.getGreen());
         System.out.println(color.getBlue());*/
 
-
-        //output
-        ImageIO.write(equalizedImage, "jpg", new File("/Users/xuhaoyu/大三下/图像处理与模式识别/processed.jpg"));
-    }
-
-    private static BufferedImage histogramEqualization(BufferedImage image) throws IOException {
+    public static BufferedImage histogramEqualization(BufferedImage image) throws IOException {
         int width = image.getWidth();
         int height = image.getHeight();
         int totalPixel = width * height;
@@ -66,6 +68,9 @@ public class ImageBasicProcess {
         sumFrequencyOfIntensity[0] = (float)numberOfEachIntensity[0] / totalPixel;
         for (int i = 1; i < 256; i++) {
             sumFrequencyOfIntensity[i] = sumFrequencyOfIntensity[i - 1] + (float)numberOfEachIntensity[i] / totalPixel;
+/*            if (0.03 < sumFrequencyOfIntensity[i] && sumFrequencyOfIntensity[i] < 0.97) {
+                System.out.println(i);
+            }*/
         }
 //        find nearest new values
         int[] newValuesOfIntensity = new int[256];
@@ -84,8 +89,8 @@ public class ImageBasicProcess {
         for (Integer i = 0; i < 256; i++) {
             newDataset.addValue(newNumberOfEachIntensity[i], "1", i);
         }
-        JFreeChart newChart = ChartFactory.createBarChart("original bar chart", "intensity", "n", newDataset);
-        FileOutputStream newOut = new FileOutputStream("/Users/xuhaoyu/大三下/图像处理与模式识别/new chart.png");
+        JFreeChart newChart = ChartFactory.createBarChart("equalized bar chart", "intensity", "n", newDataset);
+        FileOutputStream newOut = new FileOutputStream("/Users/xuhaoyu/大三下/图像处理与模式识别/equalized chart.png");
         ChartUtils.writeChartAsPNG(newOut, newChart, 900, 600);
 //        create new image
         BufferedImage imageProcessed = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -102,5 +107,38 @@ public class ImageBasicProcess {
             }
         }
         return  imageProcessed;
+    }
+
+    public static BufferedImage linearStretch(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        BufferedImage imageProcessed = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        WritableRaster raster = imageProcessed.getRaster();
+        int[] onePixel = new int[1];
+        Color colorNow;
+        int intensityNow;
+        int newIntensity;
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                colorNow = new Color(image.getRGB(i, j));
+                intensityNow = colorNow.getRed();
+                newIntensity = linearFunction(intensityNow);
+                onePixel[0] = newIntensity | newIntensity << 8 | newIntensity << 16;
+                raster.setDataElements(i, j, 1, 1, onePixel);
+            }
+        }
+        return imageProcessed;
+    }
+
+    public static int linearFunction(int origin) {
+//        original lower&upper bounds: 112/233
+//        to: 60/255
+        if (origin <= 112) {
+            return 60;
+        }
+        else if (origin >= 233) {
+            return 255;
+        }
+        return 195 * (origin - 112) / 121 + 60;
     }
 }
